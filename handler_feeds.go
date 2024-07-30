@@ -38,7 +38,25 @@ func (api *apiConfig) handlerCreateFeed(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 
-	respondWithJSON(w, http.StatusCreated, databaseFeedToAPIFeed(feed))
+	feedFollow, err := api.DB.FollowFeed(r.Context(), database.FollowFeedParams{
+		ID:        uuid.New(),
+		CreatedAt: time.Now().UTC(),
+		UpdatedAt: time.Now().UTC(),
+		UserID:    user.ID,
+		FeedID:    feed.ID,
+	})
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("Error following feed: %v", err))
+		return
+	}
+
+	respondWithJSON(w, http.StatusCreated, struct {
+		Feed       Feed       `json:"feed"`
+		FeedFollow FeedFollow `json:"feed_follow"`
+	}{
+		Feed:       databaseFeedToAPIFeed(feed),
+		FeedFollow: databaseFeedFollowToAPIFeedFollow(feedFollow),
+	})
 }
 
 func (api *apiConfig) handlerGetFeeds(w http.ResponseWriter, r *http.Request) {
