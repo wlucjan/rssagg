@@ -52,3 +52,30 @@ func databaseFeedsToAPIFeeds(feeds []database.Feed) []Feed {
 
 	return apiFeeds
 }
+
+type FeedFollow struct {
+	ID        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	UserID    uuid.UUID `json:"user_id"`
+	FeedID    uuid.UUID `json:"feed_id"`
+}
+
+func databaseFeedFollowToAPIFeedFollow(follow database.FeedFollow) FeedFollow {
+	return FeedFollow{
+		ID:        follow.ID,
+		CreatedAt: follow.CreatedAt,
+		UpdatedAt: follow.UpdatedAt,
+		UserID:    follow.UserID,
+		FeedID:    follow.FeedID,
+	}
+}
+
+func databaseFeedFollowsToAPIFeedFollows(follows []database.FeedFollow) []FeedFollow {
+	apiFollows := make([]FeedFollow, len(follows))
+	for i, follow := range follows {
+		apiFollows[i] = databaseFeedFollowToAPIFeedFollow(follow)
+	}
+
+	return apiFollows
+}
