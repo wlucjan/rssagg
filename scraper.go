@@ -2,17 +2,21 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"log"
+	"strings"
 	"sync"
 	"time"
+
+	"github.com/google/uuid"
 
 	"github.com/wlucjan/rssagg/internal/database"
 )
 
-func startScraping(db *database.Queries, concurrency int, timeBetweenReqiest time.Duration) {
-	log.Printf("Scraping on %v goroutines with %v between requests", concurrency, timeBetweenReqiest)
+func startScraping(db *database.Queries, concurrency int, timeBetweenRequest time.Duration) {
+	log.Printf("Scraping on %v goroutines with %v between requests", concurrency, timeBetweenRequest)
 
-	ticker := time.NewTicker(timeBetweenReqiest)
+	ticker := time.NewTicker(timeBetweenRequest)
 	for ; ; <-ticker.C {
 		log.Printf("Scraping...")
 		feeds, err := db.GetNextFeedsToFetch(context.Background(), int32(concurrency))
@@ -47,7 +51,34 @@ func scrapeFeed(db *database.Queries, wg *sync.WaitGroup, feed database.Feed) {
 	}
 
 	for _, item := range rssFeed.Channel.Item {
-		log.Println("Found post", item.Title, "on feed", feed.Name)
+		description := sql.NullString{}
+		if item.Description != "" {
+			description = sql.NullString{String: item.Description, Valid: true}
+		}
+
+		pubDate := sql.NullTime{}
+		if t, err := time.Parse(time.RFC1123, item.PubDate); err == nil {
+			pubDate = sql.NullTime{Time: t, Valid: true}
+		}
+
+		_, err = db.CreatePost(context.Background(), database.CreatePostParams{
+			ID:          uuid.New(),
+			CreatedAt:   time.Now(),
+			UpdatedAt:   time.Now(),
+			Title:       item.Title,
+			Description: description,
+			PublishedAt: pubDate,
+			Url:         item.Link,
+			FeedID:      feed.ID,
+		})
+		if err != nil {
+			if strings.Contains(err.Error(), "pq: duplicate key value violates unique constraint") {
+				continue
+			}
+			log.Printf("Error creating post: %v", err)
+
+			continue
+		}
 	}
 
 	log.Printf("Feed %s collected, %v posts found", feed.Name, len(rssFeed.Channel.Item))

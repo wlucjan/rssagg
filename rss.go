@@ -24,28 +24,27 @@ type RSSItem struct {
 	PubDate     string `xml:"pubDate"`
 }
 
-func URLToFeed(url string) (RSSFeed, error) {
+func URLToFeed(feedURL string) (*RSSFeed, error) {
 	httpClient := http.Client{
 		Timeout: time.Second * 10,
 	}
 
-	feed := RSSFeed{}
-
-	resp, err := httpClient.Get(url)
+	resp, err := httpClient.Get(feedURL)
 	if err != nil {
-		return feed, err
+		return nil, err
 	}
 	defer resp.Body.Close()
 
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return feed, err
+		return nil, err
 	}
 
+	feed := RSSFeed{}
 	err = xml.Unmarshal(data, &feed)
 	if err != nil {
-		return feed, err
+		return nil, err
 	}
 
-	return feed, nil
+	return &feed, nil
 }

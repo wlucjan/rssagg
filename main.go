@@ -43,8 +43,6 @@ func main() {
 		DB: db,
 	}
 
-	startScraping(db, 10, time.Minute)
-
 	router := chi.NewRouter()
 	router.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"https://*", "http://*"},
@@ -58,8 +56,10 @@ func main() {
 	v1Router := chi.NewRouter()
 	v1Router.Get("/healthz", handlerReadiness)
 	v1Router.Get("/err", handlerErr)
+
 	v1Router.Post("/users", apiCfg.handlerCreateUser)
 	v1Router.Get("/users", apiCfg.middlewareAuth(apiCfg.handlerGetUser))
+	v1Router.Get("/users/posts", apiCfg.middlewareAuth(apiCfg.handlerGetUserPosts))
 
 	v1Router.Post("/feeds", apiCfg.middlewareAuth(apiCfg.handlerCreateFeed))
 	v1Router.Get("/feeds", apiCfg.handlerGetFeeds)
@@ -74,6 +74,10 @@ func main() {
 		Addr:    ":" + portString,
 		Handler: router,
 	}
+
+	const collectionConcurrency = 10
+	const collectionInterval = time.Minute
+	go startScraping(db, collectionConcurrency, collectionInterval)
 
 	fmt.Printf("Listening on port %s\n", portString)
 	if err := srv.ListenAndServe(); err != nil {

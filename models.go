@@ -79,3 +79,46 @@ func databaseFeedFollowsToAPIFeedFollows(follows []database.FeedFollow) []FeedFo
 
 	return apiFollows
 }
+
+type Post struct {
+	ID          string    `json:"id"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	Title       string    `json:"title"`
+	Description string    `json:"description"`
+	PublishedAt time.Time `json:"published_at"`
+	URL         string    `json:"url"`
+	FeedID      string    `json:"feed_id"`
+}
+
+func databasePostToAPIPost(post database.Post) Post {
+	var description string
+	if post.Description.Valid {
+		description = post.Description.String
+	}
+
+	var publishedAt time.Time
+	if post.PublishedAt.Valid {
+		publishedAt = post.PublishedAt.Time
+	}
+
+	return Post{
+		ID:          post.ID.String(),
+		CreatedAt:   post.CreatedAt,
+		UpdatedAt:   post.UpdatedAt,
+		Title:       post.Title,
+		Description: description,
+		PublishedAt: publishedAt,
+		URL:         post.Url,
+		FeedID:      post.FeedID.String(),
+	}
+}
+
+func databasePostsToAPIPosts(posts []database.Post) []Post {
+	apiPosts := make([]Post, len(posts))
+	for i, post := range posts {
+		apiPosts[i] = databasePostToAPIPost(post)
+	}
+
+	return apiPosts
+}
